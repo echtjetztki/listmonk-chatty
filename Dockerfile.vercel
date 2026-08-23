@@ -1,0 +1,9 @@
+FROM listmonk/listmonk:latest
+
+# Vercel container runtime expects the HTTP server on $PORT (default 80).
+# listmonk itself listens on 9000 by default, so pass the Vercel PORT through.
+ENV LISTMONK_app__address=0.0.0.0:9000
+
+EXPOSE 9000
+
+CMD ["sh", "-c", "./listmonk --config=\"\" --install --idempotent --yes && ./listmonk --config=\"\""]
