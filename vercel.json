@@ -1,4 +1,10 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
-  "version": 2
+  "version": 2,
+  "services": {
+    "listmonk": {
+      "runtime": "container",
+      "root": "./"
+    }
+  }
 }
