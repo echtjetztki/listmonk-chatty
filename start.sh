@@ -3,7 +3,6 @@
 exec 2>&1
 
 # Parse the Supabase URL that Vercel already provides (no new env vars needed).
-# Format: postgres://user:password@host:port/database?sslmode=require
 url="${POSTGRES_URL_NON_POOLING:-$POSTGRES_URL}"
 
 if [ -n "$url" ]; then
@@ -19,23 +18,16 @@ if [ -n "$url" ]; then
   export LISTMONK_db__database="${db%%\?*}"
 fi
 
-# listmonk's koanf key is "ssl_mode" (underscore), NOT "sslmode"
-export LISTMONK_db__ssl_mode=require
+# IMPORTANT: listmonk's koanf key is "ssl_mode" (underscore), NOT "sslmode".
+# Use "prefer" — Supabase pooler may hang on strict "require" SSL handshake.
+# The previous install worked with "disable" (config.toml default).
+export LISTMONK_db__ssl_mode=prefer
 export LISTMONK_app__address="0.0.0.0:${PORT:-80}"
 
-echo "=== start.sh: DB=${LISTMONK_db__host}:${LISTMONK_db__port}/${LISTMONK_db__database} ssl=${LISTMONK_db__ssl_mode} addr=${LISTMONK_app__address} PORT=${PORT:-unset} ==="
+echo "=== start.sh: DB=${LISTMONK_db__host}:${LISTMONK_db__port}/${LISTMONK_db__database} ssl=${LISTMONK_db__ssl_mode} addr=${LISTMONK_app__address} ==="
 
 ./listmonk --install --idempotent --yes
 echo "=== install exit code: $? ==="
 
-echo "=== starting server under supervisor loop ==="
-attempt=0
-while true; do
-  attempt=$((attempt+1))
-  echo "=== server attempt ${attempt} starting ==="
-  ./listmonk
-  code=$?
-  echo "!!! listmonk server EXITED code=${code} attempt=${attempt} !!!"
-  # Keep the container alive and give Vercel log streaming time to flush.
-  sleep 3
-done
+echo "=== starting server ==="
+exec ./listmonk
