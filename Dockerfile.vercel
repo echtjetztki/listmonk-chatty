@@ -1,7 +1,10 @@
 FROM listmonk/listmonk:latest
 
-EXPOSE 9000
+# Vercel's container runtime provides PORT. Clear listmonk's inherited
+# docker entrypoint so we can control the startup sequence directly.
+ENTRYPOINT []
 
-# Install the schema only when needed, apply pending migrations, then start.
-# Vercel provides PORT at runtime; listmonk is configured to listen on it.
-CMD ["sh", "-c", "export LISTMONK_app__address=0.0.0.0:${PORT:-9000}; ./listmonk --install --idempotent --yes --config '' && ./listmonk --upgrade --yes --config '' && exec ./listmonk --config ''"]
+# Vercel routes HTTP traffic to the runtime PORT (default 80).
+EXPOSE 80
+
+CMD ["sh", "-c", "set -e; export LISTMONK_app__address=0.0.0.0:${PORT:-80}; echo \"Starting listmonk on ${LISTMONK_app__address}\"; ./listmonk --install --idempotent --yes --config=\"\"; ./listmonk --upgrade --yes --config=\"\"; exec ./listmonk --config=\"\""]
