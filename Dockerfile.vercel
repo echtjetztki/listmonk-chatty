@@ -1,10 +1,11 @@
 FROM listmonk/listmonk:latest
 
-# listmonk's official image listens on port 9000 by default.
+# Vercel supplies the runtime port through $PORT.
+# listmonk's default is 9000 for local/container use.
 ENV LISTMONK_app__address=0.0.0.0:9000
 
 EXPOSE 9000
 
-# The database schema install/upgrade is idempotent.
-# Database credentials are supplied as LISTMONK_* environment variables.
+# Initialize/upgrade the PostgreSQL schema, then run listmonk.
+# The database connection is supplied through LISTMONK_db__* variables.
 CMD ["sh", "-c", "./listmonk --config=\"\" --install --idempotent --yes && exec ./listmonk --config=\"\""]
