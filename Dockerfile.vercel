@@ -8,21 +8,8 @@ ENTRYPOINT []
 EXPOSE 80
 
 # Supabase is already wired into Vercel via POSTGRES_URL_NON_POOLING.
-# That URL uses the Session Pooler (port 5432) + sslmode=require, which is
-# exactly what listmonk's lib/pq driver needs. We parse it at startup and
-# feed listmonk the individual db.* values it expects — no new env vars.
-CMD ["sh", "-c", "\
-set -e; \
-if [ -n \"$POSTGRES_URL_NON_POOLING\" ]; then \
-  export LISTMONK_db__host=$(echo $POSTGRES_URL_NON_POOLING | sed -E 's|postgres://[^@]+@([^:/]+):[0-9]+/.*|\\1|'); \
-  export LISTMONK_db__port=$(echo $POSTGRES_URL_NON_POOLING | sed -E 's|postgres://[^@]+@[^:]+:([0-9]+)/.*|\\1|'); \
-  export LISTMONK_db__user=$(echo $POSTGRES_URL_NON_POOLING | sed -E 's|postgres://([^:]+):.*|\\1|'); \
-  export LISTMONK_db__password=$(echo $POSTGRES_URL_NON_POOLING | sed -E 's|postgres://[^:]+:([^@]+)@.*|\\1|'); \
-  export LISTMONK_db__database=$(echo $POSTGRES_URL_NON_POOLING | sed -E 's|postgres://[^/]+/([^?]+).*|\\1|'); \
-  export LISTMONK_db__sslmode=require; \
-fi; \
-export LISTMONK_app__address=0.0.0.0:${PORT:-80}; \
-echo \"Starting listmonk on ${LISTMONK_app__address}\"; \
-./listmonk --install --idempotent --yes; \
-echo \"Install complete, starting server...\"; \
-exec ./listmonk"]
+# start.sh parses that URL and feeds listmonk the db.* values it expects.
+COPY start.sh /start.sh
+RUN chmod +x /start.sh
+
+CMD ["/start.sh"]
