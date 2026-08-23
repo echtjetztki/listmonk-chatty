@@ -12,7 +12,7 @@ EXPOSE 80
 # The Transaction Pooler (6543) does NOT support lib/pq Prepared Statements
 ENV LISTMONK_db__host=aws-0-eu-central-1.pooler.supabase.com
 ENV LISTMONK_db__port=5432
-ENV LISTMONK_db__sslmode=disable
+ENV LISTMONK_db__sslmode=require
 # ENV LISTMONK_db__user and LISTMONK_db__password set in Vercel Dashboard deployment settings
 
 # listmonk loads config.toml and LISTMONK_* env vars override the values
