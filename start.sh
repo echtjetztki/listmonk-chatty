@@ -1,7 +1,5 @@
 #!/bin/sh
-set -e
-
-# Redirect stderr to stdout so Vercel captures ALL output (including panics)
+# Capture stderr too so panics/fatals show up in Vercel logs
 exec 2>&1
 
 # Parse the Supabase URL that Vercel already provides (no new env vars needed).
@@ -9,34 +7,35 @@ exec 2>&1
 url="${POSTGRES_URL_NON_POOLING:-$POSTGRES_URL}"
 
 if [ -n "$url" ]; then
-  # Strip scheme
   rest="${url#postgres://}"
-
-  # user:password
   userpass="${rest%%@*}"
   export LISTMONK_db__user="${userpass%%:*}"
   export LISTMONK_db__password="${userpass#*:}"
-
-  # host:port/database
   hostportdb="${rest#*@}"
   hostport="${hostportdb%%/*}"
   export LISTMONK_db__host="${hostport%%:*}"
   export LISTMONK_db__port="${hostport#*:}"
-
-  # database (strip query string)
   db="${hostportdb#*/}"
   export LISTMONK_db__database="${db%%\?*}"
 fi
 
-# IMPORTANT: listmonk's koanf key is "ssl_mode" (with underscore), NOT "sslmode"
-# LISTMONK_db__ssl_mode -> db.ssl_mode (correct)
-# LISTMONK_db__sslmode  -> db.sslmode  (WRONG - ignored by listmonk!)
+# listmonk's koanf key is "ssl_mode" (underscore), NOT "sslmode"
 export LISTMONK_db__ssl_mode=require
 export LISTMONK_app__address="0.0.0.0:${PORT:-80}"
 
-echo "Starting listmonk on ${LISTMONK_app__address}"
-echo "DB: ${LISTMONK_db__host}:${LISTMONK_db__port}/${LISTMONK_db__database} ssl=${LISTMONK_db__ssl_mode}"
+echo "=== start.sh: DB=${LISTMONK_db__host}:${LISTMONK_db__port}/${LISTMONK_db__database} ssl=${LISTMONK_db__ssl_mode} addr=${LISTMONK_app__address} PORT=${PORT:-unset} ==="
 
 ./listmonk --install --idempotent --yes
-echo "Install complete, starting server..."
-exec ./listmonk
+echo "=== install exit code: $? ==="
+
+echo "=== starting server under supervisor loop ==="
+attempt=0
+while true; do
+  attempt=$((attempt+1))
+  echo "=== server attempt ${attempt} starting ==="
+  ./listmonk
+  code=$?
+  echo "!!! listmonk server EXITED code=${code} attempt=${attempt} !!!"
+  # Keep the container alive and give Vercel log streaming time to flush.
+  sleep 3
+done
