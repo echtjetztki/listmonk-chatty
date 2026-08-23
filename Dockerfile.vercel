@@ -1,4 +1,4 @@
-FROM listmonk/listmonk:latest
+From listmonk/listmonk:latest
 
 # Vercel's container runtime provides PORT. Clear listmonk's inherited
 # docker entrypoint so we can control the startup sequence directly.
@@ -7,8 +7,25 @@ ENTRYPOINT []
 # Vercel routes HTTP traffic to the runtime PORT (default 80).
 EXPOSE 80
 
-# The official image ships a config.toml (from config.toml.sample) in /listmonk.
-# listmonk loads it and LISTMONK_* env vars override the values (db.*, app.*).
-# NOTE: do NOT pass --config="" here — an empty path makes listmonk exit with
-# "config file not found" because the default "config.toml" gets overridden.
-CMD ["sh", "-c", "set -e; export LISTMONK_app__address=0.0.0.0:${PORT:-80}; echo \"Starting listmonk on ${LISTMONK_app__address}\"; ./listmonk --install --idempotent --yes; ./listmonk --upgrade --yes; exec ./listmonk"]
+# ENV Override database connection to use Session Pooler (Port 5432)
+# Key: Pooler Port 5432 supports lib/pq Prepared Statements (required)
+# The Transaction Pooler (6543) does NOT support lib/pq Prepared Statements
+ENV LISTMONK_db__host=aws-0-eu-central-1.pooler.supabase.com
+ENV LISTMONK_db__port=5432
+ENV LISTMONK_db__sslmode=disable
+# ENV LISTMONK_db__user and LISTMONK_db__password set in Vercel Dashboard deployment settings
+
+# listmonk loads config.toml and LISTMONK_* env vars override the values
+# NOTE: do NOT pass --config="" — an empty path makes listmonk exit with
+# "config file not found" because the default config.toml gets overridden.
+# 
+# The fix: skip --upgrade Flag (Vercel has ~5min timeout, --upgrade hangs)
+# Listmonk creates tables automatically on startup if they don't exist.
+# --idempotent ensures safe reruns without table recreation errors.
+
+CMD ["sh", "-c",     "set -e; \
+    export LISTMONK_app__address=0.0.0.0:${PORT:-80}; \
+    echo "Starting listmonk on ${LISTMONK_app__address}"; \
+    ./listmonk --install --idempotent --yes; \
+    echo "Post install complete, starting server..."; \
+    exec ./listmonk"]
