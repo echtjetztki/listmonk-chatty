@@ -7,4 +7,8 @@ ENTRYPOINT []
 # Vercel routes HTTP traffic to the runtime PORT (default 80).
 EXPOSE 80
 
-CMD ["sh", "-c", "set -e; export LISTMONK_app__address=0.0.0.0:${PORT:-80}; echo \"Starting listmonk on ${LISTMONK_app__address}\"; ./listmonk --install --idempotent --yes --config=\"\"; ./listmonk --upgrade --yes --config=\"\"; exec ./listmonk --config=\"\""]
+# The official image ships a config.toml (from config.toml.sample) in /listmonk.
+# listmonk loads it and LISTMONK_* env vars override the values (db.*, app.*).
+# NOTE: do NOT pass --config="" here — an empty path makes listmonk exit with
+# "config file not found" because the default "config.toml" gets overridden.
+CMD ["sh", "-c", "set -e; export LISTMONK_app__address=0.0.0.0:${PORT:-80}; echo \"Starting listmonk on ${LISTMONK_app__address}\"; ./listmonk --install --idempotent --yes; ./listmonk --upgrade --yes; exec ./listmonk"]
