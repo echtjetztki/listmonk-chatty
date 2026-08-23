@@ -1,18 +1,16 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
-  "version": 2,
   "services": {
     "listmonk": {
       "runtime": "container",
-      "root": "./"
+      "root": "./",
+      "entrypoint": "Dockerfile.vercel"
     }
   },
   "rewrites": [
     {
       "source": "/(.*)",
-      "destination": {
-        "service": "listmonk"
-      }
+      "destination": { "service": "listmonk" }
     }
   ]
 }
